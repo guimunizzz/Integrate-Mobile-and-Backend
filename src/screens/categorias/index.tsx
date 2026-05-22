@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { initDB } from '../../database/database';
-import { CategoriaRepository } from '../../repositories/CategoriaRepository';
+import api from '../../api/api';
 import { Categoria } from '../../models/CategoriaModel';
 
 export default function CategoriaScreen() {
@@ -12,28 +11,28 @@ export default function CategoriaScreen() {
     const [nomeCategoria, setNomeCategoria] = useState('');
     const [selectedCategoria, setSelectedCategoria] = useState<Categoria | null>(null);
 
-    const categoriaRepo = new CategoriaRepository();
+
 
     useEffect(() => {
-        const setup = async () => {
-            await initDB();
-            loadData();
-        }
-        setup();
+        void loadData();
     }, [])
 
     async function loadData(): Promise<void> {
-        const data = await categoriaRepo.findAll();
-        setCategorias(data);
-        setModalVisible(false);
+        try {
+            const response = await api.get('/categoria');
+            // console.log('categorias:', response.data.recurso);
+            setCategorias(response.data.recurso);
+        } catch (error) {
+            console.error('Erro ao carregar categorias:', error);
+        }
     }
 
     async function salvar() {
         if (!nomeCategoria.trim()) return;
         if (selectedCategoria) {
-            await categoriaRepo.update(new Categoria(nomeCategoria, selectedCategoria.Id));
+            await api.put(`/categoria/${selectedCategoria.Id}`, { nome: nomeCategoria });
         } else {
-            await categoriaRepo.create(new Categoria(nomeCategoria, 0));
+            await api.post('/categoria', { nome: nomeCategoria });
         }
         closeModal();
         await loadData();
@@ -42,14 +41,14 @@ export default function CategoriaScreen() {
     function confirmarExclusao(item: Categoria): void {
         Alert.alert(
             'Excluir categoria',
-            `Deseja excluir a categoria "${item.Nome}"?`,
+            `Deseja excluir a categoria "${item.dc_categoria}"?`,
             [
                 { text: 'Cancelar', style: 'cancel' },
                 {
                     text: 'Excluir',
                     style: 'destructive',
                     onPress: async () => {
-                        await categoriaRepo.delete(item.Id);
+                        await api.delete(`/categoria/${item.id_categoria}`);
                         await loadData();
                     },
                 },
@@ -62,9 +61,9 @@ export default function CategoriaScreen() {
         setNomeCategoria('');
         setModalVisible(true);
     }
-    function openEdit(item:Categoria): void {
+    function openEdit(item: Categoria): void {
         setSelectedCategoria(item);
-        setNomeCategoria(item.Nome);
+        setNomeCategoria(item.dc_categoria);
         setModalVisible(true);
     }
     function closeModal(): void {
@@ -83,14 +82,14 @@ export default function CategoriaScreen() {
             </View>
             <FlatList
                 data={categorias}
-                keyExtractor={(item) => String(item.Id)}
+                keyExtractor={(item) => String(item.id_categoria)}
                 contentContainerStyle={styles.listContent}
                 renderItem={({ item }) => (
                     <View style={styles.card}>
-                        <Text style={styles.nomeProduto}>{item.Nome}</Text>
+                        <Text style={styles.nomeProduto}>{item.dc_categoria}</Text>
                         <View style={styles.infoContainer}>
                             <Text style={styles.label}>ID:</Text>
-                            <Text style={styles.valueText}>{item.Id}</Text>
+                            <Text style={styles.valueText}>{item.id_categoria}</Text>
                         </View>
 
                         <View style={styles.acoesContainer}>
