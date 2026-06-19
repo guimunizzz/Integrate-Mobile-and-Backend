@@ -1,27 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../App';
 import api from '../../api/api';
-import { Categoria } from '../../models/CategoriaModel';
 
 export default function CategoriaScreen() {
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Categorias'>>();
 
-    const [categorias, setCategorias] = useState<Categoria[]>([]);
+    const [categorias, setCategorias] = useState<{ descricao: string; id_categoria: number }[]>([]);
     const [modalVisible, setModalVisible] = useState(false);
     const [nomeCategoria, setNomeCategoria] = useState('');
-    const [selectedCategoria, setSelectedCategoria] = useState<Categoria | null>(null);
+    const [selectedCategoria, setSelectedCategoria] = useState<{ descricao: string; id_categoria: number } | null>(null);
 
-
-
-    useEffect(() => {
-        void loadData();
-    }, [])
+    useFocusEffect(
+        useCallback(() => {
+            void loadData();
+        }, [])
+    );
 
     async function loadData(): Promise<void> {
         try {
-            const response = await api.get('/categoria');
-            // console.log('categorias:', response.data.recurso);
-            setCategorias(response.data.recurso);
+            const response = await api.get('/categorias');
+            setCategorias(response.data.categorias);
         } catch (error) {
             console.error('Erro ao carregar categorias:', error);
         }
@@ -29,41 +30,46 @@ export default function CategoriaScreen() {
 
     async function salvar() {
         if (!nomeCategoria.trim()) return;
-        if (selectedCategoria) {
-            await api.put(`/categoria/${selectedCategoria.Id}`, { nome: nomeCategoria });
-        } else {
-            await api.post('/categoria', { nome: nomeCategoria });
+        try {
+            if (selectedCategoria) {
+                await api.put('/categorias', { descricao: nomeCategoria }, { params: { id: selectedCategoria.id_categoria } });
+            } else {
+                await api.post('/categorias', { descricao: nomeCategoria });
+            }
+            closeModal();
+            await loadData();
+        } catch (error: any) {
+            console.error('Erro ao salvar categoria:', error?.response?.status, error?.response?.data);
+            Alert.alert('Erro', `Não foi possível salvar: ${error?.response?.status} - ${JSON.stringify(error?.response?.data)}`);
         }
-        closeModal();
-        await loadData();
     }
 
-    function confirmarExclusao(item: Categoria): void {
+    function confirmarExclusao(item: { descricao: string; id_categoria: number }): void {
         Alert.alert(
             'Excluir categoria',
-            `Deseja excluir a categoria "${item.dc_categoria}"?`,
+            `Deseja excluir a categoria "${item.descricao}"?`,
             [
                 { text: 'Cancelar', style: 'cancel' },
                 {
                     text: 'Excluir',
                     style: 'destructive',
                     onPress: async () => {
-                        await api.delete(`/categoria/${item.id_categoria}`);
-                        await loadData();
+                        try {
+                            await api.delete('/categorias', { params: { id: item.id_categoria } });
+                            await loadData();
+                        } catch (error: any) {
+                            console.error('Erro ao excluir categoria:', error?.response?.status, error?.response?.data);
+                            Alert.alert('Erro', `Não foi possível excluir: ${error?.response?.status} - ${JSON.stringify(error?.response?.data)}`);
+                        }
                     },
                 },
             ],
         );
     }
 
-    function openCreate(): void {
-        setSelectedCategoria(null);
-        setNomeCategoria('');
-        setModalVisible(true);
-    }
-    function openEdit(item: Categoria): void {
+    function openEdit(item: { descricao: string; id_categoria: number }): void {
         setSelectedCategoria(item);
-        setNomeCategoria(item.dc_categoria);
+        setNomeCategoria(item.descricao);
         setModalVisible(true);
     }
     function closeModal(): void {
@@ -73,10 +79,10 @@ export default function CategoriaScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.titleScreen}>Gestão de categorias</Text>
-                <TouchableOpacity style={styles.button} onPress={openCreate}>
+                <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('NovaCategoria')}>
                     <Text style={styles.buttonText}>Novo +</Text>
                 </TouchableOpacity>
             </View>
@@ -86,7 +92,7 @@ export default function CategoriaScreen() {
                 contentContainerStyle={styles.listContent}
                 renderItem={({ item }) => (
                     <View style={styles.card}>
-                        <Text style={styles.nomeProduto}>{item.dc_categoria}</Text>
+                        <Text style={styles.nomeProduto}>{item.descricao}</Text>
                         <View style={styles.infoContainer}>
                             <Text style={styles.label}>ID:</Text>
                             <Text style={styles.valueText}>{item.id_categoria}</Text>
@@ -111,8 +117,8 @@ export default function CategoriaScreen() {
                 )}
             />
 
-            <Modal
-                visible={modalVisible}
+            {modalVisible && <Modal
+                visible
                 transparent
                 animationType="slide"
                 onRequestClose={() => closeModal()}
@@ -148,8 +154,8 @@ export default function CategoriaScreen() {
                         </View>
                     </View>
                 </View>
-            </Modal>
-        </SafeAreaView>
+            </Modal>}
+        </View>
     );
 }
 

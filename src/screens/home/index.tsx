@@ -12,7 +12,7 @@ export default function Home() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.content}>
-                <Text style={styles.title}>Atividade Integracao SQL</Text>
+                <Text style={styles.title}>Atividade API</Text>
                 <Text style={styles.subtitle}>Selecione uma opcao para continuar</Text>
 
                 <TouchableOpacity onPress={() => navigation.navigate('Produtos')} style={styles.button}>

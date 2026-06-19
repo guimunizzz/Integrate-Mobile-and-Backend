@@ -3,11 +3,13 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import Home from "./src/screens/home";
 import Produtos from "./src/screens/produtos";
 import CategoriaScreen from "./src/screens/categorias";
+import NovaCategoriaScreen from "./src/screens/novaCategoria";
 
 export type RootStackParamList = {
   Home: undefined,
   Produtos: undefined,
-  Categorias: undefined
+  Categorias: undefined,
+  NovaCategoria: undefined,
 }
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -29,6 +31,11 @@ export default function App() {
         <Stack.Screen
           name='Categorias'
           component={CategoriaScreen}
+        />
+        <Stack.Screen
+          name='NovaCategoria'
+          component={NovaCategoriaScreen}
+          options={{ title: 'Nova Categoria' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
